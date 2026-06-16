@@ -1,0 +1,17 @@
+# ─────────────────────────────────────────────
+# AI Sentiment Analyzer — Python Dependencies
+# ─────────────────────────────────────────────
+
+# Web Framework
+flask>=3.0.0
+
+# Hugging Face Transformers & ML stack
+transformers>=4.41.0
+torch>=2.6.0          # CPU build; for GPU: pip install torch --index-url https://download.pytorch.org/whl/cu118
+sentencepiece>=0.2.0  # Required by some tokenizers
+
+# HTTP utilities (Flask dependency)
+Werkzeug>=3.0.0
+
+# Standard library modules used (no install needed):
+#   sqlite3, csv, io, os, datetime

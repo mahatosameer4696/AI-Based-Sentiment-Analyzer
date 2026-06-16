@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Sentiment Analyzer — Understand Every Word</title>
+  <meta name="description" content="AI-powered sentiment analysis tool using Hugging Face Transformers. Analyze text, reviews, and comments instantly with confidence scores." />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <!-- Custom CSS -->
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════════ -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('index') }}">
+        <span class="brand-icon"><i class="fa-solid fa-brain"></i></span>
+        SentiAI
+      </a>
+
+      <button class="navbar-toggler border-0 text-white" type="button"
+              data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav ms-auto gap-1">
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('index') }}">
+              <i class="fa-solid fa-house-chimney"></i> Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('history') }}">
+              <i class="fa-solid fa-clock-rotate-left"></i> History
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════ -->
+  <main class="main-container">
+    <div class="container">
+
+      <!-- Hero Section -->
+      <section class="hero-section">
+        <div class="hero-badge">
+          <i class="fa-solid fa-robot"></i> Powered by Hugging Face Transformers
+        </div>
+        <h1 class="hero-title">AI Sentiment Analyzer</h1>
+        <p class="hero-subtitle">
+          Instantly decode the emotion behind any text — reviews, tweets, feedback, or comments —
+          with state-of-the-art deep learning.
+        </p>
+      </section>
+
+      <!-- ── Main Analyzer Card ── -->
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+
+          <div class="glass-card analyzer-card">
+            <p class="card-label"><i class="fa-solid fa-pen-to-square me-1"></i> Enter Your Text</p>
+
+            <div class="text-input-wrapper">
+              <textarea
+                id="inputText"
+                class="text-input"
+                placeholder="Type or paste any review, comment, tweet, or feedback here…&#10;&#10;e.g. &quot;This product is absolutely amazing! Best purchase ever.&quot;"
+                maxlength="5000"
+                aria-label="Text input for sentiment analysis"
+              ></textarea>
+              <span class="char-counter" id="charCounter">0 / 5000</span>
+            </div>
+
+            <!-- Sample Texts -->
+            <div class="samples-section mt-3">
+              <p class="samples-label"><i class="fa-solid fa-lightbulb me-1"></i> Try a sample</p>
+              <div class="sample-chips">
+                <span class="sample-chip" onclick="setSample(this)"
+                  data-text="This product exceeded all my expectations! The quality is outstanding and delivery was super fast. Highly recommend to everyone!">
+                  😊 Positive Review
+                </span>
+                <span class="sample-chip" onclick="setSample(this)"
+                  data-text="Absolutely terrible experience. The product broke after one day and customer service was completely unhelpful and rude.">
+                  😡 Negative Review
+                </span>
+                <span class="sample-chip" onclick="setSample(this)"
+                  data-text="The product arrived on time. It works as described. Nothing special, but nothing bad either.">
+                  😐 Neutral Comment
+                </span>
+                <span class="sample-chip" onclick="setSample(this)"
+                  data-text="The movie was visually stunning with incredible CGI effects. However, the story felt a bit predictable and slow in the middle.">
+                  🎬 Mixed Review
+                </span>
+              </div>
+            </div>
+
+            <!-- Analyze Button -->
+            <button class="btn-analyze" id="analyzeBtn" onclick="analyzeSentiment()" aria-label="Analyze sentiment">
+              <span class="spinner" id="spinner"></span>
+              <i class="fa-solid fa-magnifying-glass-chart" id="btnIcon"></i>
+              <span id="btnText">Analyze Sentiment</span>
+            </button>
+
+            <!-- Error Message -->
+            <div id="errorMsg" class="flash-message danger mt-3 d-none" role="alert">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span id="errorText"></span>
+            </div>
+          </div><!-- /analyzer-card -->
+
+          <!-- ── Result Section ── -->
+          <div class="result-section d-none" id="resultSection">
+            <div class="glass-card result-card" id="resultCard">
+
+              <div class="text-center mb-3">
+                <span class="result-emoji" id="resultEmoji"></span>
+                <h2 class="result-sentiment" id="resultSentiment"></h2>
+                <p class="result-label" id="resultLabel"></p>
+              </div>
+
+              <!-- Confidence Bar -->
+              <div class="confidence-section">
+                <div class="confidence-header">
+                  <span class="confidence-label"><i class="fa-solid fa-gauge-high me-1"></i> Confidence Score</span>
+                  <span class="confidence-value" id="confidenceValue">0%</span>
+                </div>
+                <div class="confidence-bar-bg">
+                  <div class="confidence-bar-fill" id="confidenceBar"></div>
+                </div>
+              </div>
+
+              <!-- Meta Chips -->
+              <div class="stats-row mt-3">
+                <div class="stat-chip">
+                  <i class="fa-solid fa-font" style="color:var(--accent)"></i>
+                  <span id="wordCount">0 words</span>
+                </div>
+                <div class="stat-chip">
+                  <i class="fa-solid fa-calendar-check" style="color:var(--primary)"></i>
+                  <span id="analysisTime"></span>
+                </div>
+                <div class="stat-chip">
+                  <i class="fa-solid fa-database" style="color:var(--positive)"></i>
+                  <span>Saved to History</span>
+                </div>
+              </div>
+
+            </div><!-- /result-card -->
+
+            <!-- Quick Actions -->
+            <div class="d-flex gap-2 mt-3 flex-wrap">
+              <button class="btn-primary-custom" onclick="resetForm()">
+                <i class="fa-solid fa-rotate-left"></i> Analyze Another
+              </button>
+              <a href="{{ url_for('history') }}" class="btn-export">
+                <i class="fa-solid fa-clock-rotate-left"></i> View History
+              </a>
+            </div>
+          </div><!-- /result-section -->
+
+        </div><!-- /col -->
+      </div><!-- /row -->
+
+      <!-- ── Stats Dashboard ── -->
+      <div class="stats-dashboard" id="statsDashboard">
+        <div class="row g-3 justify-content-center" id="statsRow">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div><!-- /container -->
+  </main>
+
+  <!-- ══════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════ -->
+  <footer class="footer">
+    <p>
+      Built with <i class="fa-solid fa-heart" style="color:var(--secondary)"></i> using
+      <strong style="color:var(--primary)">Flask</strong> &amp;
+      <strong style="color:var(--accent)">Hugging Face Transformers</strong>
+      &nbsp;|&nbsp;
+      <a href="{{ url_for('history') }}">View History</a>
+    </p>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ══════════════════════════════════════════
+       JAVASCRIPT
+  ══════════════════════════════════════════ -->
+  <script>
+    // ── Character Counter ──────────────────────────────────────────
+    const textarea    = document.getElementById('inputText');
+    const charCounter = document.getElementById('charCounter');
+    const MAX_CHARS   = 5000;
+
+    textarea.addEventListener('input', () => {
+      const len = textarea.value.length;
+      charCounter.textContent = `${len} / ${MAX_CHARS}`;
+      charCounter.className = 'char-counter';
+      if (len > MAX_CHARS * 0.8) charCounter.classList.add('warning');
+      if (len > MAX_CHARS * 0.95) {
+        charCounter.classList.remove('warning');
+        charCounter.classList.add('danger');
+      }
+    });
+
+    // ── Set Sample Text ────────────────────────────────────────────
+    function setSample(el) {
+      textarea.value = el.dataset.text;
+      textarea.dispatchEvent(new Event('input'));
+      textarea.focus();
+    }
+
+    // ── Reset Form ─────────────────────────────────────────────────
+    function resetForm() {
+      textarea.value = '';
+      charCounter.textContent = '0 / 5000';
+      charCounter.className = 'char-counter';
+      document.getElementById('resultSection').classList.add('d-none');
+      document.getElementById('errorMsg').classList.add('d-none');
+      document.getElementById('analyzeBtn').disabled = false;
+      setButtonState(false);
+      textarea.focus();
+    }
+
+    // ── Button Loading State ───────────────────────────────────────
+    function setButtonState(loading) {
+      const btn     = document.getElementById('analyzeBtn');
+      const spinner = document.getElementById('spinner');
+      const icon    = document.getElementById('btnIcon');
+      const text    = document.getElementById('btnText');
+
+      btn.disabled = loading;
+      spinner.style.display = loading ? 'block' : 'none';
+      icon.style.display    = loading ? 'none'  : 'inline';
+      text.textContent      = loading ? 'Analyzing…' : 'Analyze Sentiment';
+    }
+
+    // ── Show Error ─────────────────────────────────────────────────
+    function showError(message) {
+      const errBox  = document.getElementById('errorMsg');
+      const errText = document.getElementById('errorText');
+      errText.textContent = message;
+      errBox.classList.remove('d-none');
+      setButtonState(false);
+    }
+
+    // ── Analyze Sentiment (Main Function) ─────────────────────────
+    async function analyzeSentiment() {
+      const text = textarea.value.trim();
+
+      // Client-side validation
+      if (!text) { showError('Please enter some text to analyze.'); return; }
+      if (text.length < 3) { showError('Please enter at least 3 characters.'); return; }
+
+      // Reset UI
+      document.getElementById('errorMsg').classList.add('d-none');
+      document.getElementById('resultSection').classList.add('d-none');
+      setButtonState(true);
+
+      try {
+        const response = await fetch('/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          showError(data.error || 'Something went wrong. Please try again.');
+          return;
+        }
+
+        displayResult(data, text);
+        loadStats();           // refresh stats dashboard
+
+      } catch (err) {
+        showError('Network error. Please check your connection and try again.');
+      } finally {
+        setButtonState(false);
+      }
+    }
+
+    // ── Display Result ─────────────────────────────────────────────
+    function displayResult(data, originalText) {
+      const sentiment   = data.sentiment;          // 'Positive' | 'Negative' | 'Neutral'
+      const confidence  = data.confidence;          // 0–100
+      const sentimentLC = sentiment.toLowerCase();
+
+      // Emoji & label maps
+      const emojiMap = { positive: '😊', negative: '😟', neutral: '😐' };
+      const labelMap = {
+        positive: 'The text carries a positive, optimistic tone.',
+        negative: 'The text carries a negative, critical tone.',
+        neutral:  'The text appears to be neutral or balanced.'
+      };
+
+      // Populate result card
+      document.getElementById('resultEmoji').textContent     = emojiMap[sentimentLC] || '🤔';
+      document.getElementById('resultSentiment').textContent = sentiment;
+      document.getElementById('resultSentiment').className   = `result-sentiment ${sentimentLC}`;
+      document.getElementById('resultLabel').textContent     = labelMap[sentimentLC] || '';
+      document.getElementById('confidenceValue').textContent = `${confidence}%`;
+      document.getElementById('analysisTime').textContent    = data.timestamp;
+
+      // Word count
+      const words = originalText.trim().split(/\s+/).filter(Boolean).length;
+      document.getElementById('wordCount').textContent = `${words} word${words !== 1 ? 's' : ''}`;
+
+      // Confidence bar
+      const bar = document.getElementById('confidenceBar');
+      bar.className = `confidence-bar-fill ${sentimentLC}`;
+      bar.style.width = '0%';
+
+      // Style result card
+      const card = document.getElementById('resultCard');
+      card.className = `glass-card result-card ${sentimentLC}`;
+
+      // Show result section
+      document.getElementById('resultSection').classList.remove('d-none');
+
+      // Animate confidence bar
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          bar.style.width = `${confidence}%`;
+        });
+      });
+
+      // Scroll to result
+      document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // ── Load Stats Dashboard ───────────────────────────────────────
+    async function loadStats() {
+      try {
+        const res  = await fetch('/stats');
+        const data = await res.json();
+
+        const statsData = [
+          { icon: '📊', value: data.total,      title: 'Total Analyses',   delay: '0s' },
+          { icon: '😊', value: data.positive,   title: 'Positive',         delay: '0.1s', color: 'var(--positive)' },
+          { icon: '😟', value: data.negative,   title: 'Negative',         delay: '0.2s', color: 'var(--negative)' },
+          { icon: '😐', value: data.neutral,    title: 'Neutral',          delay: '0.3s', color: 'var(--neutral)'  },
+          { icon: '🎯', value: `${data.avg_confidence}%`, title: 'Avg Confidence', delay: '0.4s', color: 'var(--accent)' }
+        ];
+
+        const row = document.getElementById('statsRow');
+        row.innerHTML = statsData.map(s => `
+          <div class="col-6 col-sm-4 col-md-2">
+            <div class="glass-card stat-card" style="animation-delay:${s.delay}">
+              <span class="stat-card-icon">${s.icon}</span>
+              <span class="stat-card-value" style="${s.color ? 'color:' + s.color : ''}">${s.value}</span>
+              <span class="stat-card-title">${s.title}</span>
+            </div>
+          </div>
+        `).join('');
+
+      } catch (e) {
+        // Stats are non-critical; fail silently
+        console.warn('Stats load failed:', e);
+      }
+    }
+
+    // ── Keyboard Shortcut: Ctrl+Enter to Analyze ──────────────────
+    textarea.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        analyzeSentiment();
+      }
+    });
+
+    // ── Init ───────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      loadStats();
+    });
+  </script>
+
+</body>
+</html>

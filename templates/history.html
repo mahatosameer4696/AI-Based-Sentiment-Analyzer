@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analysis History — AI Sentiment Analyzer</title>
+  <meta name="description" content="Browse, search, and export your previous sentiment analysis results." />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <!-- Custom CSS -->
+  <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       NAVBAR
+  ══════════════════════════════════════════ -->
+  <nav class="navbar navbar-expand-lg">
+    <div class="container">
+      <a class="navbar-brand" href="{{ url_for('index') }}">
+        <span class="brand-icon"><i class="fa-solid fa-brain"></i></span>
+        SentiAI
+      </a>
+
+      <button class="navbar-toggler border-0 text-white" type="button"
+              data-bs-toggle="collapse" data-bs-target="#navMenu" aria-label="Toggle navigation">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav ms-auto gap-1">
+          <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('index') }}">
+              <i class="fa-solid fa-house-chimney"></i> Home
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="{{ url_for('history') }}">
+              <i class="fa-solid fa-clock-rotate-left"></i> History
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════════════════════════
+       MAIN CONTENT
+  ══════════════════════════════════════════ -->
+  <main class="main-container">
+    <div class="container">
+
+      <!-- Flash Messages -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash-message {{ category }}" role="alert">
+              {% if category == 'success' %}
+                <i class="fa-solid fa-circle-check"></i>
+              {% else %}
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              {% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Page Header -->
+      <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div>
+          <h1 class="page-title">
+            <i class="fa-solid fa-clock-rotate-left me-2" style="font-size:1.4rem;color:var(--primary)"></i>
+            Analysis History
+          </h1>
+          <p class="mt-1 mb-0" style="color:var(--text-muted);font-size:0.9rem;">
+            {% if records %}
+              Showing <strong style="color:var(--text-secondary)">{{ records|length }}</strong>
+              record{{ 's' if records|length != 1 else '' }}
+              {% if search_query %}
+                for "<em style="color:var(--accent)">{{ search_query }}</em>"
+              {% endif %}
+            {% else %}
+              No records found.
+            {% endif %}
+          </p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+          <!-- Analyze New -->
+          <a href="{{ url_for('index') }}" class="btn-primary-custom">
+            <i class="fa-solid fa-plus"></i> New Analysis
+          </a>
+          <!-- Export CSV -->
+          <a href="{{ url_for('export_csv', q=search_query) }}" class="btn-export" id="exportBtn">
+            <i class="fa-solid fa-file-csv"></i> Export CSV
+          </a>
+        </div>
+      </div>
+
+      <!-- ── Search Bar ── -->
+      <div class="mb-4">
+        <form method="GET" action="{{ url_for('history') }}" id="searchForm" role="search">
+          <div class="search-wrapper">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input
+              type="text"
+              class="search-input"
+              id="searchInput"
+              name="q"
+              value="{{ search_query }}"
+              placeholder="Search by text or sentiment…"
+              aria-label="Search history"
+              autocomplete="off"
+            />
+          </div>
+        </form>
+
+        {% if search_query %}
+          <a href="{{ url_for('history') }}" class="mt-2 d-inline-flex align-items-center gap-1"
+             style="color:var(--text-muted);font-size:0.82rem;text-decoration:none;">
+            <i class="fa-solid fa-xmark"></i> Clear search
+          </a>
+        {% endif %}
+      </div>
+
+      <!-- ── Stats Summary Strip ── -->
+      {% if records %}
+      <div class="row g-3 mb-4" id="summaryStrip">
+        {% set pos_count = records | selectattr('sentiment', 'equalto', 'Positive') | list | length %}
+        {% set neg_count = records | selectattr('sentiment', 'equalto', 'Negative') | list | length %}
+        {% set neu_count = records | selectattr('sentiment', 'equalto', 'Neutral')  | list | length %}
+
+        <div class="col-6 col-md-3">
+          <div class="glass-card stat-card py-3">
+            <span class="stat-card-icon">📋</span>
+            <span class="stat-card-value">{{ records|length }}</span>
+            <span class="stat-card-title">Total Records</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="glass-card stat-card py-3">
+            <span class="stat-card-icon">😊</span>
+            <span class="stat-card-value" style="color:var(--positive)">{{ pos_count }}</span>
+            <span class="stat-card-title">Positive</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="glass-card stat-card py-3">
+            <span class="stat-card-icon">😟</span>
+            <span class="stat-card-value" style="color:var(--negative)">{{ neg_count }}</span>
+            <span class="stat-card-title">Negative</span>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="glass-card stat-card py-3">
+            <span class="stat-card-icon">😐</span>
+            <span class="stat-card-value" style="color:var(--neutral)">{{ neu_count }}</span>
+            <span class="stat-card-title">Neutral</span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- ── History Table ── -->
+      <div class="glass-card p-0" style="overflow:hidden;">
+        {% if records %}
+        <div class="history-table-wrapper">
+          <table class="history-table" id="historyTable" aria-label="Sentiment analysis history">
+            <thead>
+              <tr>
+                <th style="width:50px">#</th>
+                <th>Analyzed Text</th>
+                <th style="width:130px">Sentiment</th>
+                <th style="width:150px">Confidence</th>
+                <th style="width:160px">Date &amp; Time</th>
+                <th style="width:80px;text-align:center">Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for record in records %}
+              <tr id="row-{{ record.id }}">
+
+                <!-- ID -->
+                <td>
+                  <span style="color:var(--text-muted);font-size:0.8rem;font-weight:600">#{{ record.id }}</span>
+                </td>
+
+                <!-- Text Preview with modal trigger -->
+                <td>
+                  <span
+                    class="text-preview"
+                    style="cursor:pointer;"
+                    onclick="showFullText({{ record.id }}, `{{ record.text | replace('`', '\\`') | replace('\n', '\\n') }}`)"
+                    data-tooltip="Click to read full text"
+                    title="{{ record.text }}"
+                  >
+                    {{ record.text }}
+                  </span>
+                </td>
+
+                <!-- Sentiment Badge -->
+                <td>
+                  <span class="sentiment-badge {{ record.sentiment | lower }}">
+                    {% if record.sentiment == 'Positive' %}
+                      <i class="fa-solid fa-face-smile"></i>
+                    {% elif record.sentiment == 'Negative' %}
+                      <i class="fa-solid fa-face-frown"></i>
+                    {% else %}
+                      <i class="fa-solid fa-face-meh"></i>
+                    {% endif %}
+                    {{ record.sentiment }}
+                  </span>
+                </td>
+
+                <!-- Confidence -->
+                <td>
+                  <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:0.85rem;font-weight:600;color:var(--text-secondary);min-width:42px">
+                      {{ record.confidence }}%
+                    </span>
+                    <div class="mini-bar-bg">
+                      <div class="mini-bar-fill {{ record.sentiment | lower }}"
+                           style="width:{{ record.confidence }}%"></div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Date -->
+                <td>
+                  <span style="font-size:0.82rem;color:var(--text-muted)">
+                    <i class="fa-regular fa-clock me-1"></i>{{ record.created_at }}
+                  </span>
+                </td>
+
+                <!-- Delete -->
+                <td style="text-align:center">
+                  <form method="POST"
+                        action="{{ url_for('delete_record', record_id=record.id) }}"
+                        onsubmit="return confirmDelete({{ record.id }})"
+                        style="display:inline">
+                    <button type="submit" class="btn-danger-custom" aria-label="Delete record {{ record.id }}">
+                      <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                  </form>
+                </td>
+
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div><!-- /table-wrapper -->
+
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+          <span class="empty-state-icon">
+            {% if search_query %}
+              <i class="fa-solid fa-magnifying-glass"></i>
+            {% else %}
+              <i class="fa-solid fa-database"></i>
+            {% endif %}
+          </span>
+          {% if search_query %}
+            <h5>No results found for "{{ search_query }}"</h5>
+            <p style="font-size:0.9rem">Try a different search term or
+              <a href="{{ url_for('history') }}" style="color:var(--primary)">view all records</a>.
+            </p>
+          {% else %}
+            <h5>No analyses yet</h5>
+            <p style="font-size:0.9rem">Head over to the
+              <a href="{{ url_for('index') }}" style="color:var(--primary)">home page</a>
+              and analyze your first text!
+            </p>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div><!-- /glass-card -->
+
+    </div><!-- /container -->
+  </main>
+
+  <!-- ══════════════════════════════════════════
+       FULL TEXT MODAL
+  ══════════════════════════════════════════ -->
+  <div class="modal fade" id="textModal" tabindex="-1" aria-labelledby="textModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content"
+           style="background:rgba(20,20,40,0.97);border:1px solid rgba(255,255,255,0.12);border-radius:20px;color:var(--text-primary)">
+        <div class="modal-header" style="border-bottom:1px solid rgba(255,255,255,0.08)">
+          <h5 class="modal-title" id="textModalLabel" style="font-family:'Poppins',sans-serif;font-size:1rem">
+            <i class="fa-solid fa-file-lines me-2" style="color:var(--primary)"></i>
+            Full Text — Record <span id="modalRecordId"></span>
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" style="padding:1.5rem">
+          <p id="modalText"
+             style="font-size:0.95rem;line-height:1.8;color:var(--text-secondary);white-space:pre-wrap;word-break:break-word;"></p>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid rgba(255,255,255,0.08)">
+          <button type="button"
+                  style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--text-secondary);border-radius:8px;padding:6px 16px;cursor:pointer;font-size:0.85rem"
+                  data-bs-dismiss="modal">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       FOOTER
+  ══════════════════════════════════════════ -->
+  <footer class="footer">
+    <p>
+      Built with <i class="fa-solid fa-heart" style="color:var(--secondary)"></i> using
+      <strong style="color:var(--primary)">Flask</strong> &amp;
+      <strong style="color:var(--accent)">Hugging Face Transformers</strong>
+      &nbsp;|&nbsp;
+      <a href="{{ url_for('index') }}">Analyze New Text</a>
+    </p>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // ── Live Search (debounced) ────────────────────────────────────
+    let searchTimer;
+    const searchInput = document.getElementById('searchInput');
+
+    searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        document.getElementById('searchForm').submit();
+      }, 500); // 500ms debounce
+    });
+
+    // ── Delete Confirmation ────────────────────────────────────────
+    function confirmDelete(id) {
+      return confirm(`Are you sure you want to delete record #${id}? This cannot be undone.`);
+    }
+
+    // ── Show Full Text Modal ───────────────────────────────────────
+    function showFullText(id, text) {
+      document.getElementById('modalRecordId').textContent = `#${id}`;
+      document.getElementById('modalText').textContent = text;
+      const modal = new bootstrap.Modal(document.getElementById('textModal'));
+      modal.show();
+    }
+
+    // ── Auto-dismiss Flash Messages ────────────────────────────────
+    document.querySelectorAll('.flash-message').forEach(msg => {
+      setTimeout(() => {
+        msg.style.transition = 'opacity 0.5s ease';
+        msg.style.opacity = '0';
+        setTimeout(() => msg.remove(), 500);
+      }, 4000);
+    });
+  </script>
+
+</body>
+</html>
