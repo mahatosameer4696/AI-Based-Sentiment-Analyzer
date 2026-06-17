@@ -13,5 +13,8 @@ sentencepiece>=0.2.0  # Required by some tokenizers
 # HTTP utilities (Flask dependency)
 Werkzeug>=3.0.0
 
+# Production Server
+gunicorn>=20.1.0
+
 # Standard library modules used (no install needed):
 #   sqlite3, csv, io, os, datetime
